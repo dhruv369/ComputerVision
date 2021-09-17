@@ -1,5 +1,5 @@
-# ImageProcessing_Object_Distance
-find a distance between two points
+# Image processing - sample projects
+1. find a distance between two points
 
 Software requirment.
 
@@ -11,3 +11,5 @@ Visual studie 2013
 
 Input: input_image.jpg
 Output: Distance between two points.
+
+2. Farm Distract detection using CNN
