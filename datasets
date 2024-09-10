@@ -1,0 +1,47 @@
+# Prepare the dataset class
+# DATASET : class name
+# By : Dhruv Vyas on 01-09-2024
+
+import numpy as np
+from torch.utils.data import Dataset
+import torchvision
+import torchvision.transforms as transforms
+import pandas as pd
+import matplotlib.pyplot as plt
+import torch
+
+
+class DataSetLocal(Dataset):
+    def __init__(self, batchsize=10):
+        super().__init__()
+        self.batch_size = batchsize
+        self.train_set = torchvision.datasets.FashionMNIST(train=True,
+                                                           root='./data',
+                                                           download=True,
+                                                           transform=transforms.Compose([transforms.ToTensor()]))
+
+        self.test_set = torchvision.datasets.FashionMNIST(train=False,
+                                                          root='./data',
+                                                          download=True,
+                                                          transform=transforms.Compose([transforms.ToTensor()]))
+
+        self.train_data_loader = torch.utils.data.DataLoader(
+            self.train_set,
+            batch_size=self.batch_size)
+        self.test_data_loader = torch.utils.data.DataLoader(
+            self.test_set,
+            batch_size=self.batch_size)
+
+    def __getitem__(self, index, train=True):
+        if train:
+            label, image = self.train_set[index]
+            return label, image
+        else:
+            label, image = self.test_set[index]
+            return label, image
+
+    def __len__(self, train=True):
+        if train:
+            return len(self.train_set)
+        else:
+            return len(self.test_set)
