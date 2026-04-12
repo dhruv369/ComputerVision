@@ -1,6 +1,14 @@
 # Datasets
 data/
 datasets/
+
+# Model weights
+model_weights/
+
+# Logs
+logs/
+
+# Temporary files
 *.csv
 *.zip
 *.tar.gz
