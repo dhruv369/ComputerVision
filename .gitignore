@@ -1,0 +1,33 @@
+# Datasets
+data/
+datasets/
+*.csv
+*.zip
+*.tar.gz
+
+# Visual Studio
+.vs/
+.vscode/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln.DotSettings
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
