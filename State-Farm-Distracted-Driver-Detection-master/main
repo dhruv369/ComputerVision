@@ -1,0 +1,33 @@
+from Model import *
+from DataSet import DataSetLocal
+from utils import *
+import torch.optim as optim
+
+'''
+hyper parameters
+'''
+numEpochs = 2
+batchSize = 64
+
+if __name__ == '__main__':
+    # get the device info
+    device = get_device()
+
+    # prepare the data and visualize
+    data = DataSetLocal(batchsize=batchSize)
+    display_image_grid(data.train_data_loader[0],data.train_data_loader[1])
+
+    # fetch model
+    model = Network1().to(device)
+
+    # set hyper parameters
+    optimizer = optim.SGD(model.parameters(), lr=10.01, momentum=0.9)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1, verbose=True)
+    criterion = nn.CrossEntropyLoss()
+    test_incorrect_predication = {'images': [], 'ground_truths': [], 'predicted_vals': []}
+
+    for epoch in range(1, numEpochs + 1):
+        print(f'Epoch {epoch}')
+        train(model, device, data.train_data_loader, optimizer, criterion)
+        test(model, device, data.test_data_loader, criterion)
+        scheduler.step()
