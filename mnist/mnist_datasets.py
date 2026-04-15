@@ -10,33 +10,32 @@ class MNISTDataset(torch.utils.data.Dataset):
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))
         ])
-        self.train_datasets = datasets.MNIST(root='./data', train=train, download=True, transform=self.transform)
-        self.test_datasets = datasets.MNIST(root='./data', train=False, download=True, transform=self.transform)
+        self.dataset = datasets.MNIST(root='./data', train=train, download=True, transform=self.transform)
 
 
     def __len__(self):
-        return len(self.train_datasets)
+        return len(self.dataset)
 
     def __getitem__(self, idx):
-        image, label = self.train_datasets[idx]
+        image, label = self.dataset[idx]
         return image, label
     
     def image_shape(self):
-        image, _ = self.train_datasets[0]
+        image, _ = self.dataset[0]
         return image.shape
 
     def display_image(self, idx):
-        image, label = self.train_datasets[idx]
+        image, label = self.dataset[idx]
         plt.imshow(image.squeeze(), cmap='gray')
         plt.title(f'Label: {label}')
         plt.show()  
 
 
     def train_dataloader(self, batch_size=64, shuffle=True):
-        return torch.utils.data.DataLoader(self.train_datasets, batch_size=batch_size, shuffle=shuffle)    
+        return torch.utils.data.DataLoader(self.dataset, batch_size=batch_size, shuffle=shuffle)    
 
     def test_dataloader(self, batch_size=64, shuffle=False):
-        return torch.utils.data.DataLoader(self.test_datasets, batch_size=batch_size, shuffle=shuffle)        
+        return torch.utils.data.DataLoader(self.dataset, batch_size=batch_size, shuffle=shuffle)        
 
 if __name__ == "__main__":
     train_dataset = MNISTDataset(train=True)

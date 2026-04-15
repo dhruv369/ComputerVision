@@ -4,9 +4,10 @@ import torch.nn.functional as F
 from torch import optim 
 from mnist_datasets import MNISTDataset
 from mnist_model import MNISTModel
-import tensorboard as tb
-from tensorflow.keras.callbacks import ModelCheckpoint
 import matplotlib.pyplot as plt
+import json
+import os
+from datetime import datetime
 
 
 # Custom EarlyStopping class from scratch
@@ -34,16 +35,36 @@ class EarlyStopping:
                 print("Early stopping triggered.")
                 return True  # Signal to stop training
         return False
+
 # Trainer class to handle the training loop
 class Trainer:
-    def __init__(self, model, device, train_loader, optimizer):
+    def __init__(self, model, device, train_loader, val_loader, optimizer, model_name="mnist_model"):
         self.model = model
         self.device = device
         self.train_loader = train_loader
+        self.val_loader = val_loader
         self.optimizer = optimizer  
-        self.checkpoint_path = 'mnist/model_weights/mnist_model_checkpoint.pth'
-        self.early_stopping = EarlyStopping(self.model, patience=5000, delta=0.001, path=self.checkpoint_path, verbose=True)
+        self.model_name = model_name
+        self.checkpoint_path = f'mnist/model_weights/{model_name}_checkpoint.pth'
+        self.metrics_path = f'mnist/model_weights/{model_name}_metrics.json'
+        os.makedirs(os.path.dirname(self.checkpoint_path), exist_ok=True)
+        self.early_stopping = EarlyStopping(self.model, patience=5, delta=0.001, path=self.checkpoint_path, verbose=True)
         self.train_losses = []  # List to store training losses for each epoch
+        self.val_losses = []
+        self.val_accuracies = []
+
+    def calculate_accuracy(self, loader):
+        self.model.eval()
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for data, target in loader:
+                data, target = data.to(self.device), target.to(self.device)
+                output = self.model(data)
+                pred = output.argmax(dim=1, keepdim=True)
+                correct += pred.eq(target.view_as(pred)).sum().item()
+                total += target.size(0)
+        return correct / total
 
     def train(self, epochs):
         
@@ -65,30 +86,64 @@ class Trainer:
                 # Backpropagate the loss and update the model parameters
                 loss.backward()
                 self.optimizer.step()
-                loss_value = loss.item()
 
-                # save the best model
-                early_stop = self.early_stopping.check_early_stop(loss_value)
-                if early_stop:
-                    print(f"Early stopping at epoch {epoch}, batch {batch_idx}")
-                    return  # Exit the training loop if early stopping is triggered
-                
-            # Calculate and print the average training loss for the epoch
+            # Calculate average training loss
             avg_train_loss = train_loss / len(self.train_loader)
-            print(f"Epoch {epoch}, Average Training Loss: {avg_train_loss:.4f}")
-            self.train_losses.append(avg_train_loss) 
+            self.train_losses.append(avg_train_loss)
+
+            # Calculate validation loss and accuracy
+            val_loss = 0
+            self.model.eval()
+            with torch.no_grad():
+                for data, target in self.val_loader:
+                    data, target = data.to(self.device), target.to(self.device)
+                    output = self.model(data)
+                    val_loss += F.cross_entropy(output, target).item()
+            avg_val_loss = val_loss / len(self.val_loader)
+            self.val_losses.append(avg_val_loss)
+            val_accuracy = self.calculate_accuracy(self.val_loader)
+            self.val_accuracies.append(val_accuracy)
+
+            print(f"Epoch {epoch}, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, Val Acc: {val_accuracy:.4f}")
+
+            # Check early stopping
+            early_stop = self.early_stopping.check_early_stop(avg_val_loss)
+            if early_stop:
+                print(f"Early stopping at epoch {epoch}")
+                break
+
+        # Save metrics
+        metrics = {
+            "train_losses": self.train_losses,
+            "val_losses": self.val_losses,
+            "val_accuracies": self.val_accuracies,
+            "epochs": list(range(1, len(self.train_losses) + 1))
+        }
+        with open(self.metrics_path, 'w') as f:
+            json.dump(metrics, f)
 
     def plot_training_loss(self):
         # Plot the training loss over epochs
         plt.figure(figsize=(10, 5))
         plt.plot(self.train_losses, label='Training Loss')
+        plt.plot(self.val_losses, label='Validation Loss')
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
-        plt.title('Training Loss Over Epochs')
+        plt.title('Training and Validation Loss Over Epochs')
         plt.legend()
-        plt.show()
+        plt.savefig(f'mnist/model_weights/{self.model_name}_loss_plot.png')
+        plt.close()
 
-            
+    def plot_accuracy(self):
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.val_accuracies, label='Validation Accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy')
+        plt.title('Validation Accuracy Over Epochs')
+        plt.legend()
+        plt.savefig(f'mnist/model_weights/{self.model_name}_acc_plot.png')
+        plt.close()
+
 def main():
     # Set device to GPU if available, otherwise use CPU
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -96,11 +151,13 @@ def main():
     # Set the number of epochs for training
     epochs = 5
     learn_rate = 0.001
-
+    model_name = "mnist_model"  # Can be changed for different runs
 
     # Load the MNIST dataset
     train_dataset = MNISTDataset(train=True)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=64, shuffle=True)
+    test_dataset = MNISTDataset(train=False)
+    train_loader = train_dataset.train_dataloader(batch_size=64, shuffle=True)
+    val_loader = test_dataset.test_dataloader(batch_size=64, shuffle=False)  # Using test as validation
 
     # Initialize the model and move it to the appropriate device
     model = MNISTModel().to(device)
@@ -109,11 +166,9 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=learn_rate)
 
     # Create a Trainer instance and start training for a specified number of epochs
-    trainer = Trainer(model, device, train_loader, optimizer)
+    trainer = Trainer(model, device, train_loader, val_loader, optimizer, model_name)
     trainer.train(epochs)
-    # Plot the training loss over epochs
-    trainer.plot_training_loss()
-
+    # Metrics and plots are saved automatically
 
 
 if __name__ == "__main__":  

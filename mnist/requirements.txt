@@ -1,0 +1,6 @@
+torch
+torchvision
+tqdm
+matplotlib
+streamlit
+pandas
