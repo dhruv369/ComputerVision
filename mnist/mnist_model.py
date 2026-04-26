@@ -14,9 +14,9 @@ class MNISTModel(nn.Module):
         # input size is 26x26x16 after conv1, then max pooling reduces it to 13x13x16
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3)
         # input size is 11x11x32 after conv2, then max pooling reduces it to 5x5x32
-        self.fc1 = nn.Linear(32 * 5 * 5, 64)
+        self.fc1 = nn.Linear(32 * 5 * 5, 32)
         # output size is 64, then fully connected layer reduces it to 10 for the 10 classes
-        self.fc2 = nn.Linear(64, 10)
+        self.fc2 = nn.Linear(32, 10)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
