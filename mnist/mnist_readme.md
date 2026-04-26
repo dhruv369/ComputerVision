@@ -8,8 +8,11 @@ This repository contains a PyTorch implementation for training a Convolutional N
 - `mnist_model.py`: Defines the CNN model architecture for MNIST classification.
 - `mnist_train.py`: Contains the training loop, early stopping, and metric tracking.
 - `mnist_dashboard.py`: Streamlit dashboard for visualizing training metrics and comparing models.
+- `train_ci.py`: CI/CD training script that trains for 1 epoch and saves model with timestamp.
+- `test_model.py`: Testing script that validates model parameters, input/output shapes, and accuracy.
 - `requirements.txt`: List of Python dependencies.
 - `model_weights/`: Directory containing saved model checkpoints and training metrics.
+- `.github/workflows/ci-cd.yml`: GitHub Actions workflow for CI/CD pipeline.
 
 ## Setup
 
@@ -58,12 +61,49 @@ The dashboard allows you to:
 - View plots of training/validation loss and validation accuracy over epochs
 - See a summary table of final metrics for each model
 
+## CI/CD Pipeline
+
+### Local Testing
+
+Before pushing to GitHub, you can run the CI/CD pipeline locally:
+
+1. Train the model:
+   ```bash
+   python train_ci.py
+   ```
+   This trains the model for 1 epoch and saves it with a timestamp suffix (e.g., `mnist_model_20260426_231352.pth`).
+
+2. Run tests:
+   ```bash
+   python test_model.py
+   ```
+   This script checks:
+   - Model has fewer than 100,000 parameters
+   - Model accepts 28x28 input without issues
+   - Model has exactly 10 outputs
+   - Model achieves >80% accuracy on the test set
+
+### GitHub Actions
+
+The repository includes a GitHub Actions workflow (`.github/workflows/ci-cd.yml`) that:
+- Installs Python and dependencies
+- Trains the model for 1 epoch
+- Runs all validation tests
+- Uploads the trained model as an artifact if tests pass
+
+To use:
+1. Push your code to the `main` branch on GitHub
+2. The workflow will automatically run
+3. Check the Actions tab for results
+4. Download the model artifact from successful runs
+
 ## Model Architecture
 
 The CNN model consists of:
 - 2 convolutional layers with ReLU activation and max pooling
 - 2 fully connected layers
 - Output layer with 10 classes (digits 0-9)
+- Total parameters: ~56,714 (under 100,000)
 
 ## Dataset
 
