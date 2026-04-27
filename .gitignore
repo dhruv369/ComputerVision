@@ -4,6 +4,7 @@ datasets/
 
 # Model weights
 model_weights/
+runs/
 
 # Logs
 logs/

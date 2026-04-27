@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import json
 import os
 from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
 
 
 # Custom EarlyStopping class from scratch
@@ -45,26 +46,43 @@ class Trainer:
         self.val_loader = val_loader
         self.optimizer = optimizer  
         self.model_name = model_name
+        self.writer = SummaryWriter("runs/mnist_experiment")
         self.checkpoint_path = f'mnist/model_weights/{model_name}_checkpoint.pth'
         self.metrics_path = f'mnist/model_weights/{model_name}_metrics.json'
         os.makedirs(os.path.dirname(self.checkpoint_path), exist_ok=True)
         self.early_stopping = EarlyStopping(self.model, patience=5, delta=0.001, path=self.checkpoint_path, verbose=True)
         self.train_losses = []  # List to store training losses for each epoch
+        self.train_accuracies = []
         self.val_losses = []
         self.val_accuracies = []
 
-    def calculate_accuracy(self, loader):
+
+    def calculate_accuracy(self):
         self.model.eval()
         correct = 0
         total = 0
         with torch.no_grad():
-            for data, target in loader:
+            for data, target in self.train_loader:
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
                 pred = output.argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()
                 total += target.size(0)
-        return correct / total
+            val_accuracies = correct / total
+            self.val_accuracies.append(val_accuracies)
+        return val_accuracies
+
+    def calculate_loss(self):
+        val_loss = 0
+        self.model.eval()
+        with torch.no_grad():
+            for data, target in self.val_loader:
+                data, target = data.to(self.device), target.to(self.device)
+                output = self.model(data)
+                val_loss += F.cross_entropy(output, target).item()
+            avg_val_loss = val_loss / len(self.val_loader)
+            self.val_losses.append(avg_val_loss)
+        return avg_val_loss
 
     def train(self, epochs):
         
@@ -72,6 +90,7 @@ class Trainer:
         self.model.train()
         for epoch in range(1, epochs + 1):  # Train for the specified number of epochs
             train_loss = 0
+            total = 0
             # Loop over the training data in batches
             for batch_idx, (data, target) in enumerate(tqdm.tqdm(self.train_loader)):
                 data, target = data.to(self.device), target.to(self.device)
@@ -79,6 +98,7 @@ class Trainer:
                 self.optimizer.zero_grad()
                 # Forward pass: compute the model output for the current batch of data
                 output = self.model(data)
+                total += target.size(0)
                 # Compute the loss using cross-entropy
                 loss = F.cross_entropy(output, target)
                 train_loss += loss.item()
@@ -92,20 +112,11 @@ class Trainer:
             self.train_losses.append(avg_train_loss)
 
             # Calculate validation loss and accuracy
-            val_loss = 0
-            self.model.eval()
-            with torch.no_grad():
-                for data, target in self.val_loader:
-                    data, target = data.to(self.device), target.to(self.device)
-                    output = self.model(data)
-                    val_loss += F.cross_entropy(output, target).item()
-            avg_val_loss = val_loss / len(self.val_loader)
-            self.val_losses.append(avg_val_loss)
-            val_accuracy = self.calculate_accuracy(self.val_loader)
-            self.val_accuracies.append(val_accuracy)
-
+            avg_val_loss = self.calculate_loss()
+            val_accuracy = self.calculate_accuracy()
+            self.writer.add_scalar("Loss/train", avg_train_loss, epoch)
             print(f"Epoch {epoch}, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, Val Acc: {val_accuracy:.4f}")
-
+            
             # Check early stopping
             early_stop = self.early_stopping.check_early_stop(avg_val_loss)
             if early_stop:
@@ -121,6 +132,7 @@ class Trainer:
         }
         with open(self.metrics_path, 'w') as f:
             json.dump(metrics, f)
+        self.writer.close()
 
     def plot_training_loss(self):
         # Plot the training loss over epochs
