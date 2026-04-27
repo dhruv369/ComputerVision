@@ -46,7 +46,7 @@ def test_model(model_path):
 
     accuracy = correct / total
     print(".4f")
-    assert accuracy > 0.80, ".4f"
+    assert accuracy > 0.98, ".4f"
 
     print("All tests passed!")
 
