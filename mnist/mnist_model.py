@@ -22,13 +22,13 @@ class MNISTModel(nn.Module):
 
     def forward(self, x):
         x = F.relu(self.bn1(self.conv1(x))) # [B,16,26,26]
-        x = F.max_pool2d(x, 2)
-        x = F.relu(self.bn2(self.conv2(x))) # [B,32,24,24]
-        x = F.max_pool2d(x, 2)
-        x = F.relu(self.bn3(self.conv3(x))) # [B,64,22,22]
-        x = F.max_pool2d(x, 2)
-        x = F.adaptive_avg_pool2d(x, 1)
-        x  = torch.flatten(x,1)     # [B, 7744 ] 
+        x = F.max_pool2d(x, 2)              # [B,16,13,13]        
+        x = F.relu(self.bn2(self.conv2(x))) # [B,32,11,11]
+        x = F.max_pool2d(x, 2)              # [B,32,5,5]
+        x = F.relu(self.bn3(self.conv3(x))) # [B,64,3,3]
+        x = F.max_pool2d(x, 2)              # [B,64,1,1]
+        x = F.adaptive_avg_pool2d(x, 1)     # [B,64,1,1]
+        x  = torch.flatten(x,1)     # [B, 64 ] 
         x = self.dropout(F.relu(self.fc1(x)))    
         x = self.fc2(x)           # [B, 10 ]
         return x    
