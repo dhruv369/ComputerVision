@@ -11,12 +11,12 @@ from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 
 # Custom EarlyStopping class from scratch
-class EarlyStopping:
-    def __init__(self, model, patience=5, delta=0.001, path='checkpoint.pt', verbose=True):
+class SaveCheckpoint:
+    def __init__(self, model, patience=5, delta=0.001, checkpoint_dir='checkpoints', verbose=True):
         self.model = model
         self.patience = patience
         self.delta = delta
-        self.path = path
+        self.checkpoint_dir = checkpoint_dir
         self.verbose = verbose
         self.best_loss = None
         self.no_improvement_count = 0
@@ -26,7 +26,7 @@ class EarlyStopping:
             self.best_loss = val_loss
             self.no_improvement_count = 0
             # Save checkpoint if improvement observed
-            torch.save(self.model.state_dict(), self.path)
+            torch.save(self.model.state_dict(), f"{self.checkpoint_dir}/best_model.pth")
             if self.verbose:
                 print(f"Model improved; checkpoint saved at loss {val_loss:.4f}")
         else:
@@ -35,6 +35,21 @@ class EarlyStopping:
                 print("Early stopping triggered.")
                 return True  # Signal to stop training
         return False
+
+    def save_checkpoint(self):
+            torch.save(self.model.state_dict(), f"{self.checkpoint_dir}/latest_model.pth")
+            if self.verbose:
+                print("Checkpoint saved successfully.")
+                
+
+    def load_checkpoint(self):
+        if os.path.exists(f"{self.checkpoint_dir}/best_model.pth"):
+            self.model.load_state_dict(torch.load(f"{self.checkpoint_dir}/best_model.pth"))
+            if self.verbose:
+                print("Checkpoint loaded successfully.")
+        else:
+            if self.verbose:
+                print("No checkpoint found to load.")
 
 # Trainer class to handle the training loop
 class Trainer:
@@ -54,11 +69,9 @@ class Trainer:
         self.log_dir = os.path.join(self.run_dir, f'mnist/model_weights/{model_name}_logs')
         os.makedirs(self.log_dir, exist_ok=True)
         self.writer = SummaryWriter(self.run_dir)
-
-        self.checkpoint_path = os.path.join(self.ckpt_dir, f'{model_name}_checkpoint.pth')
         self.metrics_path = os.path.join(self.log_dir, f'{model_name}_metrics.json')
 
-        self.early_stopping = EarlyStopping(self.model, patience=5, delta=0.001, path=self.checkpoint_path, verbose=True)
+        self.checkpoint_saver = SaveCheckpoint(self.model, patience=5, delta=0.001, checkpoint_dir=self.ckpt_dir, verbose=True)
 
         self.metrics = {
             "epochs": [],
@@ -66,7 +79,7 @@ class Trainer:
             "train_accuracies": [],
             "val_losses": [],
             "val_accuracies": [],
-            "learning_rate": optimizer.param_groups[0]['lr'],
+            "learning_rate": [],
             "gradient_norms": [],
             "epoch_durations": [],
         }
@@ -136,24 +149,25 @@ class Trainer:
                     print(f"Epoch {epoch} [{batch_idx * len(data)}/{len(self.train_loader.dataset)}] Loss: {loss.item():.4f}")
 
             self.metrics["epochs"].append(epoch)
-            #self.metrics["learning_rate"].append(self.optimizer.param_groups[0]['lr'])
-
+            self.metrics["learning_rate"].append(self.optimizer.param_groups[0]["lr"])
             # Calculate average training accuracy and loss for the epoch and store it
             self.calculate_training_accuracy(correct, total)
             self.calculate_training_loss(train_current_loss)
 
             # Calculate validation loss and accuracy
             self.calculate_validation_accuracy_loss()
-
-            self.writer.add_scalar("Accuracy/train", self.metrics["train_accuracies"][-1], epoch)
+            # Log metrics to TensorBoard
+            self.writer.add_scalar("LR", self.metrics["learning_rate"][-1], epoch)
             self.writer.add_scalar("Loss/train", self.metrics["train_losses"][-1], epoch)
             self.writer.add_scalar("Loss/validation", self.metrics["val_losses"][-1], epoch)
             self.writer.add_scalar("Accuracy/validation", self.metrics["val_accuracies"][-1], epoch)
-
+            self.writer.add_scalar("Accuracy/train", self.metrics["train_accuracies"][-1], epoch)
+            
+            # Print epoch summary
             print(f"Epoch {epoch}, Train_acc: {self.metrics['train_accuracies'][-1]:.4f}, Train Loss: {self.metrics['train_losses'][-1]:.4f}, Val Loss: {self.metrics['val_losses'][-1]:.4f}, Val Acc: {self.metrics['val_accuracies'][-1]:.4f}")
-
+            self.checkpoint_saver.save_checkpoint()
             # Check early stopping
-            early_stop = self.early_stopping.check_early_stop(self.metrics["val_losses"][-1])
+            early_stop = self.checkpoint_saver.check_early_stop(self.metrics["val_losses"][-1])
             if early_stop:
                 print(f"Early stopping at epoch {epoch}")
                 break
@@ -216,7 +230,14 @@ def main():
     model = MNISTModel().to(device)
 
     # Set up the optimizer 
-    optimizer = optim.Adam(model.parameters(), lr=hyperparameters["learning_rate"])
+    optimizer = None
+    if hyperparameters["optimizer"] == "Adam":  
+        optimizer = optim.Adam(model.parameters(), lr=hyperparameters["learning_rate"])
+    elif hyperparameters["optimizer"] == "SGD":
+        optimizer = optim.SGD(model.parameters(), lr=hyperparameters["learning_rate"], momentum=0.9)
+    else:
+        raise ValueError(f"Unsupported optimizer: {hyperparameters['optimizer']}")
+    
 
     # Create a Trainer instance and start training for a specified number of epochs
     trainer = Trainer(model, device, train_loader, val_loader, optimizer, hyperparameters["model_name"], hyperparameters["run_name"])
