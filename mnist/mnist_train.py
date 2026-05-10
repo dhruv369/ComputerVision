@@ -44,13 +44,15 @@ class Trainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.optimizer = optimizer  
+        self.base_dir = "runs/experiments"
         self.model_name = model_name
         self.run_name = run_name+datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.base_dir = "runs/experiments"
         self.run_dir = os.path.join(self.base_dir, self.run_name)
+        os.makedirs(self.run_dir, exist_ok=True)
         self.ckpt_dir = os.path.join(self.run_dir, f'mnist/model_weights/{model_name}_checkpoints')
         os.makedirs(self.ckpt_dir, exist_ok=True)
         self.log_dir = os.path.join(self.run_dir, f'mnist/model_weights/{model_name}_logs')
+        os.makedirs(self.log_dir, exist_ok=True)
         self.writer = SummaryWriter(self.run_dir)
 
         self.checkpoint_path = os.path.join(self.ckpt_dir, f'{model_name}_checkpoint.pth')
