@@ -3,7 +3,7 @@ import tqdm
 import torch.nn.functional as F
 from torch import optim 
 from mnist_datasets import MNISTDataset
-from mnist_model import MNISTModel
+from mnist_model import MNISTModel, MNISTModelwoBN
 import matplotlib.pyplot as plt
 import json
 import os
@@ -53,12 +53,14 @@ class SaveCheckpoint:
 
 # Trainer class to handle the training loop
 class Trainer:
-    def __init__(self, model, device, train_loader, val_loader, optimizer, model_name="mnist_model", run_name="default"):
+    def __init__(self, model, device, train_loader, val_loader, optimizer, scheduler, criterion=None, model_name="mnist_model", run_name="default"):
         self.model = model
         self.device = device
         self.train_loader = train_loader
         self.val_loader = val_loader
-        self.optimizer = optimizer  
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self.criterion = criterion if criterion is not None else torch.nn.CrossEntropyLoss()
         self.base_dir = "mnist/runs/experiments"
         self.model_name = model_name
         self.run_name = run_name+datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -109,7 +111,7 @@ class Trainer:
                 # Calculate the number of correct predictions for the batch and accumulate it
                 correct += pred.eq(target.view_as(pred)).sum().item()
                 # Calculate validation loss for the batch and accumulate it
-                val_loss += F.cross_entropy(output, target).item()
+                val_loss += self.criterion(output, target).item()
             # Calculate average validation loss and store it
             validation_loss = val_loss / len(self.val_loader)
             self.metrics["val_losses"].append(validation_loss)    
@@ -138,7 +140,7 @@ class Trainer:
                 correct += pred.eq(target.view_as(pred)).sum().item()
                 
                 # Compute the loss using cross-entropy
-                loss = F.cross_entropy(output, target)
+                loss = self.criterion(output, target)
                 train_current_loss += loss.item()
                 
                 # Backpropagate the loss and update the model parameters
@@ -162,6 +164,9 @@ class Trainer:
             self.writer.add_scalar("Loss/validation", self.metrics["val_losses"][-1], epoch)
             self.writer.add_scalar("Accuracy/validation", self.metrics["val_accuracies"][-1], epoch)
             self.writer.add_scalar("Accuracy/train", self.metrics["train_accuracies"][-1], epoch)
+            
+            # Update learning rate scheduler
+            self.scheduler.step(self.metrics["val_losses"][-1])
             
             # Print epoch summary
             print(f"Epoch {epoch}, Train_acc: {self.metrics['train_accuracies'][-1]:.4f}, Train Loss: {self.metrics['train_losses'][-1]:.4f}, Val Loss: {self.metrics['val_losses'][-1]:.4f}, Val Acc: {self.metrics['val_accuracies'][-1]:.4f}")
@@ -203,12 +208,13 @@ class Trainer:
 def set_hyperparameters():
     # Define hyperparameters for training
     hyperparameters = {
-        "learning_rate": 0.1,
+        "learning_rate": 0.001, #Adam lr1e-3, SGD lr1e-2
         "batch_size": 64,
-        "epochs": 5,
-        "optimizer": "Adam",
+        "epochs": 10,
+        "optimizer": "AdamW", #Adam or SGD or AdamW
         "model_name": "mnist_model",
-        "run_name": "cnn_adam_lr1e-3_bs64_epochs5",
+        "run_name": "scheduler_dp_0.2_padding_1_aug_bn_on_AdamW_le-3_",
+        #"run_name": "cnn_adamw_lr1e-3_bs64_wo_bn_epochs10",
     }
     return hyperparameters
 
@@ -231,16 +237,22 @@ def main():
 
     # Set up the optimizer 
     optimizer = None
-    if hyperparameters["optimizer"] == "Adam":  
-        optimizer = optim.Adam(model.parameters(), lr=hyperparameters["learning_rate"])
+    if hyperparameters["optimizer"] == "Adam":
+        optimizer = optim.Adam(model.parameters(), lr=hyperparameters["learning_rate"], weight_decay=1e-4)
+    elif hyperparameters["optimizer"] == "AdamW":  
+        optimizer = optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
     elif hyperparameters["optimizer"] == "SGD":
         optimizer = optim.SGD(model.parameters(), lr=hyperparameters["learning_rate"], momentum=0.9)
     else:
         raise ValueError(f"Unsupported optimizer: {hyperparameters['optimizer']}")
     
+    # Set up the learning rate scheduler
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
+    # Define the loss function (criterion) for training
+    criterion = F.cross_entropy
 
     # Create a Trainer instance and start training for a specified number of epochs
-    trainer = Trainer(model, device, train_loader, val_loader, optimizer, hyperparameters["model_name"], hyperparameters["run_name"])
+    trainer = Trainer(model, device, train_loader, val_loader, optimizer, scheduler, criterion, hyperparameters["model_name"], hyperparameters["run_name"])
     trainer.train(hyperparameters["epochs"])
     # Metrics and plots are saved automatically
 
