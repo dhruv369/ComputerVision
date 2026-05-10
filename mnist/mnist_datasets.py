@@ -14,8 +14,11 @@ class MNISTDataset(torch.utils.data.Dataset):
         self.img_shape = None
 
         self.transform = transforms.Compose([
+            transforms.RandomRotation(degrees=10),  # Randomly rotate images by up to 15 degrees
+            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),  # Randomly translate images by up to 10% of the image size
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))
+            
         ])
         self.dataset = datasets.MNIST(root='./data', train=train, download=True, transform=self.transform)
         self.dataset_summary(display_sample=False)
