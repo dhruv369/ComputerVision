@@ -9,17 +9,23 @@ import matplotlib.pyplot as plt
 
 # Define the MNIST dataset class
 class MNISTDataset(torch.utils.data.Dataset):
-    def __init__(self, train=True):
+    def __init__(self, train=True, augment_on=True):
         self.train = train
         self.img_shape = None
+        self.augment = augment_on
+
+        if self.augment:
+            transform_list = [
+                transforms.RandomRotation(degrees=10),  # Randomly rotate images by up to 10 degrees
+                transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),  # Randomly translate images by up to 10% of the image size
+            ]
+        else:
+            transform_list = []
 
         self.transform = transforms.Compose([
-            transforms.RandomRotation(degrees=10),  # Randomly rotate images by up to 15 degrees
-            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),  # Randomly translate images by up to 10% of the image size
             transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,))
-            
-        ])
+            transforms.Normalize((0.1307,), (0.3081,)),
+        ] + transform_list)
         self.dataset = datasets.MNIST(root='./data', train=train, download=True, transform=self.transform)
         self.dataset_summary(display_sample=False)
 
@@ -79,8 +85,8 @@ class MNISTDataset(torch.utils.data.Dataset):
         return test_loader
 
 if __name__ == "__main__":
-    train_dataset = MNISTDataset(train=True)
-    test_dataset = MNISTDataset(train=False)
+    train_dataset = MNISTDataset(train=True, augment_on=False)
+    test_dataset = MNISTDataset(train=False, augment_on=False)
 
     train_loader = train_dataset.train_dataloader(batch_size=64, shuffle=True)
     test_loader = test_dataset.test_dataloader(batch_size=64, shuffle=False)
