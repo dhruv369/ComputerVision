@@ -44,7 +44,7 @@ class Trainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.optimizer = optimizer  
-        self.base_dir = "runs/experiments"
+        self.base_dir = "mnist/runs/experiments"
         self.model_name = model_name
         self.run_name = run_name+datetime.now().strftime('%Y%m%d_%H%M%S')
         self.run_dir = os.path.join(self.base_dir, self.run_name)
@@ -189,12 +189,12 @@ class Trainer:
 def set_hyperparameters():
     # Define hyperparameters for training
     hyperparameters = {
-        "learning_rate": 0.001,
+        "learning_rate": 0.1,
         "batch_size": 64,
         "epochs": 5,
         "optimizer": "Adam",
         "model_name": "mnist_model",
-        "run_name": "cnn_adam_lr1e-3"
+        "run_name": "cnn_adam_lr1e-3_bs64_epochs5",
     }
     return hyperparameters
 
