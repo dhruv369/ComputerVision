@@ -227,8 +227,8 @@ def main():
     hyperparameters = set_hyperparameters()
 
     # Load the MNIST dataset
-    train_dataset = MNISTDataset(train=True)
-    test_dataset = MNISTDataset(train=False)
+    train_dataset = MNISTDataset(train=True, augment_on=True)
+    test_dataset = MNISTDataset(train=False, augment_on=False)
     train_loader = train_dataset.train_dataloader(batch_size=64, shuffle=True)
     val_loader = test_dataset.test_dataloader(batch_size=64, shuffle=False)  # Using test as validation
 
