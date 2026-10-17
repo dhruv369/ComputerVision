@@ -22,20 +22,20 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r mnist/requirements.txt
+        pip install -r projects/mnist-keras/requirements.txt
 
     - name: Train model
       run: |
-        cd mnist
+        cd projects/mnist-keras
         python train_ci.py
 
     - name: Run tests
       run: |
-        cd mnist
+        cd projects/mnist-keras
         python test_model.py
 
     - name: Upload model artifact
       uses: actions/upload-artifact@v4
       with:
         name: mnist-model
-        path: mnist/model_weights/mnist_model_*.pth
+        path: projects/mnist-keras/mnist/model_weights/mnist_model_*.pth
