@@ -6,9 +6,9 @@ A portfolio of computer vision projects covering image classification, object de
 
 | Project | Overview |
 | --- | --- |
-| [MNIST Classification](./projects/mnist-keras/mnist_readme.md) | PyTorch CNN experiments with MNIST and Fashion-MNIST, training metrics, a comparison dashboard, and CI testing. |
+| [MNIST Digit Classification](./projects/mnist-pytorch/README.md) | PyTorch CNN project with reproducible training, held-out evaluation, single-image prediction, visualized results, and automated tests. |
 
-The `projects/` folder is for current portfolio highlights. As work progresses, feature one or two projects there and move completed or less-active work to `archive/`.
+The `projects/` folder is for current portfolio highlights. As work progresses, will move other projects there and for now less-active works are in `archive/`folder.
 
 ## Archived projects
 
@@ -24,14 +24,14 @@ The `projects/` folder is for current portfolio highlights. As work progresses, 
 ComputerVision/
 ├── .gitignore
 ├── .github/
-│   └── workflows/                       # MNIST CI workflow
+│   └── workflows/   # MNIST CI workflow
+├── projects/
+│   └── mnist-pytorch/                    # Featured digit-classification project                
 ├── archive/
 │   ├── README.md
 │   ├── distracted-driver-detection/
 │   ├── image-processing-object-distance/
 │   └── stable-diffusion/
-├── projects/
-│   └── mnist-keras/                      # Featured classification project
 └── README.md
 ```
 

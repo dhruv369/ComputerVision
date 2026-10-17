@@ -1,0 +1,20 @@
+training:
+  seed: 42
+  device: auto
+  epochs: 10
+  batch_size: 64
+  num_workers: 0
+  validation_fraction: 0.1
+  optimizer: AdamW
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  momentum: 0.9
+  scheduler_patience: 3
+  early_stopping_patience: 5
+  run_name: mnist-cnn
+
+paths:
+  data: data
+  artifacts: artifacts
+  results: results
+  figures: results/figures

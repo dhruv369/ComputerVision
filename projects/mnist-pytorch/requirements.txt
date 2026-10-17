@@ -1,0 +1,8 @@
+torch
+torchvision
+matplotlib
+streamlit
+pandas
+tensorboard
+PyYAML
+Pillow

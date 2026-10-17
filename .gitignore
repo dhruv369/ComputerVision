@@ -5,6 +5,8 @@ datasets/
 # Model weights
 model_weights/
 runs/
+/projects/mnist-pytorch/artifacts/*.pth
+/projects/mnist-pytorch/artifacts/*.pt
 
 # Logs
 logs/
