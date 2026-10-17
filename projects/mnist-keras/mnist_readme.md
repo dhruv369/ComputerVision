@@ -19,7 +19,7 @@ This repository contains a PyTorch implementation for training a Convolutional N
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd ComputerVision/mnist
+   cd ComputerVision/projects/mnist-keras
    ```
 
 2. Install dependencies:
